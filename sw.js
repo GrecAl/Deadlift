@@ -1,5 +1,5 @@
 // Офлайн-кэш приложения. Версию меняй при обновлении файлов.
-const CACHE = "dl205-v5";
+const CACHE = "dl205-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -33,7 +33,7 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, copy));
           return resp;
         })
-        .catch(() => caches.match("./index.html"));
+        .catch(() => e.request.mode === "navigate" ? caches.match("./index.html") : Response.error());
     })
   );
 });
