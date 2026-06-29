@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Становая">
+<meta name="theme-color" content="#0d0f12">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<title>Становая + Подтягивания · Трекер силового цикла</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html{ color-scheme:dark; }
+  :root{
+    --bg:#0d0f12; --card:#16191f; --card2:#1d2129; --line:#2a2f39;
+    --tx:#e8eaed; --tx2:#9aa0ab; --tx3:#7c828e;
+    --p0:#5b8def; --p1:#3fb27f; --p2:#e0a13a; --p3:#d9694f; --pr:#e0483a;
+    --dl:#e0a13a; --pu:#5b8def; --done:#3fb27f;
+    --focus:#7fabff;
+  }
+  html,body{ background:var(--bg); color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.4; }
+  body{ padding:0 0 calc(26px + env(safe-area-inset-bottom)); max-width:560px; margin:0 auto;
+    -webkit-tap-highlight-color:transparent; }
+  button,summary,input,a,.setpill{ touch-action:manipulation; }
+
+  /* Видимый фокус для клавиатуры / скринридера */
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; border-radius:10px; }
+  .setpill:focus-visible{ outline-offset:3px; }
+
+  header{ position:sticky; top:0; z-index:20; background:rgba(13,15,18,0.93);
+    backdrop-filter:blur(12px); border-bottom:1px solid var(--line);
+    padding:calc(13px + env(safe-area-inset-top)) 16px 11px; }
+  .h-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:9px; }
+  .h-title{ font-size:16px; font-weight:800; letter-spacing:-0.02em; margin:0; }
+  .h-title b{ color:var(--dl); } .h-title i{ color:var(--pu); font-style:normal; }
+  .h-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .h-btn{ font-size:12px; color:var(--tx2); background:var(--card2); border:1px solid var(--line);
+    min-height:44px; padding:0 13px; border-radius:22px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .h-btn:hover{ background:var(--line); color:var(--tx); }
+  .h-btn:active{ transform:scale(0.96); }
+  .h-btn.icon{ padding:0 12px; font-size:16px; }
+  .prog-wrap{ display:flex; align-items:center; gap:10px; }
+  .prog-bar{ flex:1; height:9px; background:var(--card2); border-radius:10px; overflow:hidden; }
+  .prog-fill{ height:100%; background:linear-gradient(90deg,var(--pu),var(--dl)); border-radius:10px; transition:width .3s ease; width:0%; }
+  .prog-pct{ font-size:13px; font-weight:700; color:var(--tx2); min-width:38px; text-align:right; font-variant-numeric:tabular-nums; }
+
+  .container{ padding:14px 12px; }
+
+  /* Панель настроек */
+  .settings{ background:var(--card); border:1px solid var(--line); border-radius:14px; margin:0 0 14px; overflow:hidden; }
+  .settings[hidden]{ display:none; }
+  .settings-h{ font-size:13px; font-weight:700; padding:13px 15px 4px; color:var(--tx); }
+  .settings-sub{ font-size:11px; color:var(--tx3); padding:0 15px 10px; line-height:1.5; }
+  .sfield{ display:flex; align-items:center; gap:12px; padding:9px 15px; border-top:1px solid var(--line); }
+  .sfield label{ flex:1; font-size:13px; color:var(--tx2); }
+  .sfield .unit{ color:var(--tx3); font-size:11px; margin-left:4px; }
+  .snum{ width:82px; background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--tx);
+    font-size:16px; font-weight:700; padding:10px 12px; text-align:center; font-variant-numeric:tabular-nums;
+    font-family:inherit; -moz-appearance:textfield; }
+  .snum::-webkit-outer-spin-button,.snum::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .snum:focus{ outline:none; border-color:var(--focus); }
+  .settings-foot{ display:flex; gap:9px; padding:11px 15px; border-top:1px solid var(--line); align-items:center; }
+  .settings-foot .note{ flex:1; font-size:11px; color:var(--tx3); line-height:1.45; }
+  .lnk{ background:none; border:none; color:var(--pu); font-size:12px; font-weight:700; cursor:pointer;
+    min-height:44px; padding:0 6px; }
+  .lnk:hover{ text-decoration:underline; }
+
+  /* Карточка «Сегодня» */
+  .today{ background:linear-gradient(160deg,#1b212b,#15181e); border:1px solid #2f3a49;
+    border-radius:16px; padding:15px 16px 16px; margin-bottom:14px; position:relative; overflow:hidden; }
+  .today::before{ content:""; position:absolute; inset:0 auto 0 0; width:4px;
+    background:linear-gradient(180deg,var(--pu),var(--dl)); }
+  .today-kick{ font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--tx3); display:flex; align-items:center; gap:7px; }
+  .today-kick .dot{ width:7px; height:7px; border-radius:50%; }
+  .today-day{ font-size:19px; font-weight:800; letter-spacing:-0.02em; margin:6px 0 2px; }
+  .today-meta{ font-size:12px; color:var(--tx2); margin-bottom:11px; font-variant-numeric:tabular-nums; }
+  .today-ex{ display:flex; align-items:baseline; gap:8px; padding:5px 0; border-top:1px solid rgba(255,255,255,0.05); font-size:12.5px; }
+  .today-ex .nm{ color:var(--tx); font-weight:600; }
+  .today-ex .tg{ color:var(--tx2); }
+  .today-cta{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    min-height:50px; margin-top:13px; border:none; border-radius:13px; cursor:pointer;
+    background:linear-gradient(90deg,var(--pu),#6f9cf2); color:#06122b; font-size:15px; font-weight:800;
+    transition:transform .12s ease, filter .12s ease; }
+  .today-cta:hover{ filter:brightness(1.07); }
+  .today-cta:active{ transform:scale(0.985); }
+  .today.done{ background:linear-gradient(160deg,#15241b,#131915); border-color:#2c4a39; }
+  .today.done::before{ background:var(--done); }
+  .today-done-msg{ font-size:15px; font-weight:700; color:var(--done); margin-top:4px; }
+
+  /* График */
+  details.graph{ background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:16px; overflow:hidden; }
+  summary.graph-s{ list-style:none; cursor:pointer; padding:13px 15px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:700; }
+  summary.graph-s::-webkit-details-marker{ display:none; }
+  .graph-s .chev{ margin-left:auto; color:var(--tx3); font-size:12px; transition:transform .2s ease; }
+  details.graph[open] .graph-s .chev{ transform:rotate(90deg); }
+  .graph-body{ padding:4px 12px 14px; }
+  .graph-body svg{ width:100%; height:auto; display:block; }
+  .graph-leg{ display:flex; gap:16px; padding:2px 4px 0; font-size:11px; color:var(--tx2); flex-wrap:wrap; }
+  .graph-leg span{ display:inline-flex; align-items:center; gap:6px; }
+  .graph-leg i{ width:11px; height:3px; border-radius:2px; display:inline-block; }
+
+  .phase-h{ display:flex; align-items:center; gap:9px; margin:22px 4px 10px; }
+  .phase-h:first-child{ margin-top:4px; }
+  .phase-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .phase-name{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--tx2); margin:0; }
+  .phase-wk{ font-size:11px; color:var(--tx3); margin-left:auto; }
+
+  details.week{ background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:9px; overflow:hidden; }
+  details.week.cur{ border-color:#3a4a63; box-shadow:0 0 0 1px rgba(91,141,239,0.25); }
+  summary.week-s{ list-style:none; cursor:pointer; padding:14px 15px; display:flex; align-items:center; gap:12px; }
+  summary.week-s::-webkit-details-marker{ display:none; }
+  .wk-stripe{ width:4px; align-self:stretch; border-radius:4px; flex-shrink:0; min-height:34px; }
+  .wk-info{ flex:1; min-width:0; }
+  .wk-num{ font-size:15px; font-weight:700; }
+  .wk-sub{ font-size:12px; color:var(--tx3); margin-top:1px; }
+  .wk-badge{ font-size:11px; font-weight:700; padding:5px 9px; border-radius:20px;
+    background:var(--card2); color:var(--tx2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .wk-badge.full{ background:rgba(63,178,127,0.16); color:var(--done); }
+  .wk-chev{ color:var(--tx3); font-size:13px; transition:transform .2s ease; }
+  details.week[open] .wk-chev{ transform:rotate(90deg); }
+
+  .day{ border-top:1px solid var(--line); }
+  summary.day-s{ list-style:none; cursor:pointer; padding:13px 15px 13px 19px; display:flex; align-items:center; gap:10px; background:var(--card2); }
+  summary.day-s::-webkit-details-marker{ display:none; }
+  .day-label{ font-size:13px; font-weight:700; flex:1; min-width:0; }
+  .day-mini{ font-size:11px; color:var(--tx3); font-variant-numeric:tabular-nums; }
+  .day-check{ color:var(--done); font-size:13px; opacity:0; transition:opacity .2s ease; white-space:nowrap; }
+  .day-check.show{ opacity:1; }
+
+  .ex-list{ padding:4px 0 8px; }
+  .ex2{ padding:13px 16px 11px 18px; border-bottom:1px solid rgba(42,47,57,0.5); }
+  .ex2:last-child{ border-bottom:none; }
+  .ex2-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .ex2-tag{ font-size:9px; font-weight:800; padding:3px 6px; border-radius:5px; letter-spacing:0.04em; flex-shrink:0; }
+  .tag-dl{ background:rgba(224,161,58,0.18); color:var(--dl); }
+  .tag-pu{ background:rgba(91,141,239,0.18); color:var(--pu); }
+  .tag-pr{ background:rgba(63,178,127,0.18); color:var(--done); }
+  .tag-ar{ background:rgba(154,160,171,0.16); color:var(--tx2); }
+  .tag-sq{ background:rgba(176,124,217,0.18); color:#b884e0; }
+  .ex2-name{ font-size:14px; font-weight:600; flex:1; min-width:0; }
+  .ex2-sub{ font-size:11px; color:var(--tx2); flex-basis:100%; }
+
+  .sets{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .setpill{ min-width:46px; height:46px; padding:0 11px; border-radius:12px; border:2px solid var(--line);
+    background:var(--card); color:var(--tx2); font-size:13px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:background .14s ease, border-color .14s ease, color .14s ease, transform .1s ease; font-variant-numeric:tabular-nums; }
+  .setpill:hover{ border-color:var(--tx3); }
+  .setpill:active{ transform:scale(0.93); }
+  .setpill.on{ background:var(--done); border-color:var(--done); color:#06140d; }
+  .setpill.warm{ font-size:11px; color:var(--tx3); }
+  .setpill.warm.on{ color:#06140d; }
+  .setpill.goal{ border-color:var(--dl); color:var(--dl); }
+  .setpill.goal.on{ background:var(--dl); border-color:var(--dl); color:#1a1205; }
+
+  .wnote{ width:100%; background:var(--bg); border:1px solid var(--line); border-radius:9px;
+    color:var(--tx); font-size:13px; padding:10px 12px; font-family:inherit; min-height:42px; }
+  .wnote:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px rgba(127,171,255,0.2); }
+  .wnote::placeholder{ color:var(--tx3); }
+
+  .pr-day summary.day-s{ background:rgba(224,72,58,0.13); }
+  .pr-day .day-label{ color:var(--pr); }
+
+  .legend{ font-size:10.5px; color:var(--tx3); padding:13px 6px 0; line-height:1.6; }
+  .legend b{ color:var(--tx2); font-weight:700; }
+
+  .toast{ position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(24px); display:flex; align-items:center; gap:14px;
+    background:#23272f; color:var(--tx); border:1px solid var(--line); font-size:13px; font-weight:600;
+    padding:11px 14px; border-radius:13px; opacity:0; transition:opacity .25s ease, transform .25s ease;
+    pointer-events:none; z-index:60; max-width:calc(100% - 28px); box-shadow:0 8px 30px rgba(0,0,0,0.45); }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  .toast.ok{ background:var(--done); color:#06140d; border-color:transparent; }
+  .toast-act{ background:rgba(255,255,255,0.16); color:inherit; border:none; font-weight:800; font-size:12px;
+    min-height:36px; padding:0 12px; border-radius:9px; cursor:pointer; white-space:nowrap; }
+  .toast.ok .toast-act{ background:rgba(0,0,0,0.18); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition-duration:0.001ms !important; animation-duration:0.001ms !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="h-top">
+    <h1 class="h-title" id="hTitle">Становая <b>170</b> · Подтягивания <i>+70</i></h1>
+    <div class="h-actions">
+      <button class="h-btn icon" id="installBtn" hidden aria-label="Установить приложение на телефон">⬇︎</button>
+      <button class="h-btn icon" id="settingsBtn" aria-expanded="false" aria-controls="settings" aria-label="Настройки: рабочий макс и цели">⚙</button>
+      <button class="h-btn" id="resetBtn">Сброс</button>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-bar" id="progBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Общий прогресс цикла">
+      <div class="prog-fill" id="progFill"></div>
+    </div>
+    <div class="prog-pct" id="progPct">0%</div>
+  </div>
+</header>
+
+<div class="container">
+  <section class="settings" id="settings" hidden aria-label="Настройки нагрузок">
+    <div class="settings-h">Свои цифры</div>
+    <div class="settings-sub">Введи свой рабочий максимум и цели — все %, килограммы и график пересчитаются (округление до 2.5&nbsp;кг). По умолчанию — исходная программа 140&nbsp;→&nbsp;170 / +70.</div>
+    <div class="sfield">
+      <label for="setDlStart">Становая — старт<span class="unit">раб. макс</span></label>
+      <input class="snum" id="setDlStart" type="number" inputmode="numeric" min="40" max="400" step="2.5" autocomplete="off">
+    </div>
+    <div class="sfield">
+      <label for="setDlGoal">Становая — цель цикла</label>
+      <input class="snum" id="setDlGoal" type="number" inputmode="numeric" min="40" max="400" step="2.5" autocomplete="off">
+    </div>
+    <div class="sfield">
+      <label for="setPuGoal">Подтягивания — цель<span class="unit">доп. вес</span></label>
+      <input class="snum" id="setPuGoal" type="number" inputmode="numeric" min="0" max="150" step="2.5" autocomplete="off">
+    </div>
+    <div class="settings-foot">
+      <span class="note" id="installHint"></span>
+      <button class="lnk" id="resetSettings">Сбросить к исходным</button>
+    </div>
+  </section>
+
+  <div id="today" aria-live="polite"></div>
+
+  <details class="graph" id="graphWrap">
+    <summary class="graph-s">📈 Прогресс к цели <span class="chev" aria-hidden="true">▶</span></summary>
+    <div class="graph-body" id="graphBody"></div>
+  </details>
+
+  <div class="legend" id="legend"></div>
+  <div id="app"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const DAYLBL = { dA:"День 1 · Тяжёлый", dB:"День 2 · Скоростной", dC:"День 3 · Лёгкий + жим", pr:"День PR · Попытки" };
+
+// helper: повторить метку count раз
+function S(label,count){ return Array.from({length:count},()=>label); }
+// упражнение: t=тип(dl/pu), n=имя, s=подзаголовок, sets=массив меток подходов, warm=индексы разминочных, goal=индексы целевых
+function E(t,n,s,sets,opts){ return {t,n,s,sets,warm:(opts&&opts.warm)||[],goal:(opts&&opts.goal)||[]}; }
+
+// ── ШАБЛОНЫ ФАЗ · 3 дня · макс 3 подхода · % от текущего макса (140→растёт) + кг + RPE ──
+const TPL = {
+  // Фаза 0 — Адаптация · трен.макс ≈140 · грув техники, скорость, без отказа
+  p0:{ dA:[ E("dl","Становая классика","65% (91 кг) · RPE 6 · взрывной съём", S("5",3)),
+            E("pu","Подтягивания с весом","+35 кг · RPE 7", S("5",3)) ],
+       dB:[ E("dl","Скоростная тяга","70% (98 кг) · RPE 6 · динамика", S("3",3)),
+            E("dl","Тяга с дефицита 5 см","60% (84 кг) · RPE 6 · съём", S("4",3)),
+            E("sq","Передний присед","RPE 6 · техника, фронт-стойка", S("6",3)),
+            E("pu","Подтягивания с весом","+30 кг · RPE 7 · объём", S("6",3)),
+            E("ar","Бицепс штангой стоя","RPE 8 · добивка", S("10",2)) ],
+       dC:[ E("dl","Тяга с паузой ниже колен","65% (91 кг) · RPE 6 · техника", S("3",3)),
+            E("pu","Подтягивания с весом","+30 кг · RPE 7", S("6",3)),
+            E("pr","Армейский жим стоя","RPE 7", S("8",3)),
+            E("ar","Трицепс (французский / брусья)","RPE 8", S("12",3)) ] },
+  // Фаза 1 — Объём · трен.макс ≈148 · волны 70-85%, топ + back-off
+  p1:{ dA:[ E("dl","Становая классика","80% (118 кг) · RPE 8 · +2.5 кг/нед", S("3",3)),
+            E("dl","Back-off становая","72% (107 кг) · RPE 7 · объём", S("5",2)),
+            E("pu","Подтягивания с весом","+50 кг · RPE 8", S("4",3)) ],
+       dB:[ E("dl","Скоростная тяга","75% (111 кг) · RPE 7 · взрывно", S("3",3)),
+            E("dl","Тяга с дефицита 5-8 см","70% (104 кг) · RPE 7 · слабая точка", S("4",3)),
+            E("sq","Передний присед","RPE 7 · кор + квадрицепс", S("5",3)),
+            E("pu","Подтягивания с весом","+42 кг · RPE 7 · объём", S("5",3)),
+            E("ar","Бицепс штангой стоя","RPE 8 · добивка", S("10",2)) ],
+       dC:[ E("dl","Тяга с паузой ниже колен","75% (111 кг) · RPE 7", S("3",3)),
+            E("pu","Подтягивания с весом","+40 кг · RPE 7 · объём", S("6",3)),
+            E("pr","Армейский жим стоя","RPE 8", S("8",3)),
+            E("ar","Трицепс (французский / брусья)","RPE 8", S("12",3)) ] },
+  // Фаза 2 — Сила · трен.макс ≈157 · 85-92%, доводка съёма, без грайнда
+  p2:{ dA:[ E("dl","Становая классика","88% (138 кг) · RPE 8 · 2-3 повт", S("2",3)),
+            E("dl","Back-off становая","80% (126 кг) · RPE 7", S("3",3)),
+            E("pu","Подтягивания с весом","+58 кг · RPE 8-9", S("3",3)) ],
+       dB:[ E("dl","Скоростная тяга","80% (126 кг) · RPE 7 · взрывной съём", S("2",3)),
+            E("dl","Тяга с дефицита","75% (118 кг) · RPE 8 · слабая точка", S("3",3)),
+            E("sq","Передний присед","RPE 8 · сила, 3-4 повт", S("4",3)),
+            E("pu","Подтягивания с весом","+50 кг · RPE 7 · объём", S("4",3)),
+            E("ar","Бицепс штангой стоя","RPE 8 · добивка", S("10",2)) ],
+       dC:[ E("dl","Тяга с паузой ниже колен","78% (122 кг) · RPE 7", S("3",3)),
+            E("pu","Подтягивания с весом","+45 кг · RPE 7 · объём", S("6",3)),
+            E("pr","Армейский жим стоя","RPE 8", S("6",3)),
+            E("ar","Трицепс (французский / брусья)","RPE 8", S("12",3)) ] }
+};
+
+// ── НЕДЕЛИ 16-20 · ПИК · проекция макса ≈170 · макс 3 подхода ──
+const WK = {
+  16:{ dA:[ E("dl","Становая — выход на рабочее","топ 2-3 повт · ~90% · RPE 8", ["разм","3@138","2@150"], {warm:[0]}),
+            E("pu","Подтягивания с весом","RPE 8", ["3@+56","3@+56","2@+60"]) ],
+       dB:[ E("dl","Скоростная тяга","70% (115 кг) · RPE 7 · взрывно", S("2@115",3)),
+            E("pu","Подтягивания с весом","+48 кг · RPE 7 · объём", ["4@+48","4@+48"]),
+            E("ar","Бицепс штангой стоя","RPE 7", S("10",2)) ],
+       dC:[ E("dl","Тяга с паузой","72% (118 кг) · RPE 7", S("3@118",2)),
+            E("pu","Подтягивания с весом","+44 кг · RPE 7", ["5@+44"]),
+            E("pr","Армейский жим стоя","RPE 7", S("8",3)),
+            E("ar","Трицепс","RPE 7", S("12",2)) ] },
+  17:{ dA:[ E("dl","Становая — подводка","топ 1-2 · ~94% · RPE 8-9", ["разм","2@152","1@160"], {warm:[0]}),
+            E("pu","Подтягивания с весом","RPE 8-9", ["2@+62","2@+62","1@+64"]) ],
+       dB:[ E("dl","Скоростная тяга","72% (122 кг) · RPE 7", S("2@122",3)),
+            E("pu","Подтягивания с весом","+50 кг · RPE 7 · объём", ["4@+50","4@+50"]),
+            E("ar","Бицепс штангой стоя","RPE 7", S("10",2)) ],
+       dC:[ E("dl","Тяга с паузой","70% (118 кг) · RPE 6", S("3@118",2)),
+            E("pu","Подтягивания с весом","+46 кг · RPE 6 · лёгко", ["5@+46"]),
+            E("pr","Армейский жим стоя","RPE 7", S("6",3)),
+            E("ar","Трицепс","RPE 7", S("12",2)) ] },
+  18:{ dA:[ E("dl","Становая — пик","проба перед боем · 1 @ ~95% · RPE 9", ["разм","1@160","1@опц 166"], {warm:[0],goal:[2]}),
+            E("pu","Подтягивания с весом","проба · RPE 9", ["1@+66","1@+66"]) ],
+       dB:[ E("dl","Скоростная тяга лёгкая","65% (110 кг) · RPE 6", S("2@110",3)),
+            E("pu","Подтягивания с весом","+45 кг · RPE 6 · лёгко", ["5@+45"]) ],
+       dC:[ E("dl","Тяга лёгкая","60% (102 кг) · техника", S("3@102",2)),
+            E("pu","Подтягивания с весом","+40 кг · лёгко", ["6@+40"]),
+            E("pr","Армейский жим стоя","RPE 6 · лёгко", S("8",2)) ] },
+  19:{ dA:[ E("dl","Становая — разгрузка","без героизма · 1 @ ~88%", ["разм","1@150"], {warm:[0]}),
+            E("pu","Подтягивания с весом","+58 кг · лёгко", ["2@+58"]) ],
+       dB:[ E("dl","Скоростная тяга","60% (102 кг) · свежесть", S("2@102",2)),
+            E("pu","Подтягивания с весом","+45 кг", ["3@+45"]) ],
+       dC:[ E("dl","Тяга лёгкая","55% (94 кг) · техника", S("3@94",2)),
+            E("pu","Подтягивания с весом","+40 кг · лёгко", ["5@+40"]) ] },
+  20:{ pr:[ E("dl","СТАНОВАЯ — попытки","разминка → 152 → 163 → 172", ["разм","152","163","172"], {warm:[0],goal:[3]}),
+            E("pu","ПОДТЯГИВАНИЯ — попытки","свежим (лучше отдельный день)", ["разм","+62","+66","+70"], {warm:[0],goal:[3]}) ] }
+};
+
+const PHASES = [
+  { name:"Фаза 0 — Адаптация", weeks:[1,2,3], tpl:"p0", color:"var(--p0)", sub:"Submax · техника · % от старта" },
+  { name:"Фаза 1 — Объём", weeks:[4,5,6,7,8,9], tpl:"p1", color:"var(--p1)", sub:"Волны 70-85% · база силы" },
+  { name:"Фаза 2 — Сила", weeks:[10,11,12,13,14,15], tpl:"p2", color:"var(--p2)", sub:"85-92% · доводка съёма с пола" },
+  { name:"Фаза 3 — Подводка", weeks:[16,17,18,19], tpl:"wk", color:"var(--p3)", sub:"Выход на цель" },
+  { name:"PR", weeks:[20], tpl:"wk", color:"var(--pr)", sub:"День попыток 🎯" }
+];
+const DELOAD = [7];
+
+// ── НАСТРОЙКИ / МАСШТАБ НАГРУЗОК ──
+const DEF = { dlStart:140, dlGoal:170, puGoal:70 };
+function st(){ return Object.assign({}, DEF, state.settings||{}); }
+function isCustom(){ const s=st(); return s.dlStart!==DEF.dlStart || s.dlGoal!==DEF.dlGoal || s.puGoal!==DEF.puGoal; }
+function round25(x){ return Math.round(x/2.5)*2.5; }
+function fmtKg(x){ const r=round25(x); return (Math.round(r*10)/10).toString().replace(/\.0$/,""); }
+function dlFactor(week){ const s=st(); return week>=16 ? s.dlGoal/DEF.dlGoal : s.dlStart/DEF.dlStart; }
+function puFactor(){ const s=st(); return s.puGoal/DEF.puGoal; }
+
+// Масштабирование подзаголовка упражнения (за один проход, без двойной замены)
+function scaleSub(txt,t,week){
+  if(!isCustom()||!txt) return txt;
+  if(t==="dl"){ const f=dlFactor(week);
+    return txt.replace(/(@)(\d{2,3})|(\d{2,3})(\s*кг)|\b(1\d\d|2\d\d)\b(?!\s*%)/g,(m,at,a,b,kgu,c)=>{
+      if(at) return "@"+fmtKg(+a*f);
+      if(b!==undefined) return fmtKg(+b*f)+kgu;
+      if(c) return fmtKg(+c*f);
+      return m;
+    });
+  }
+  if(t==="pu"){ const f=puFactor();
+    return txt.replace(/\+(\d{1,3})|(\d{2,3})(\s*кг)/g,(m,a,b,kgu)=>{
+      if(a!==undefined) return "+"+fmtKg(+a*f);
+      return fmtKg(+b*f)+kgu;
+    });
+  }
+  return txt;
+}
+// Масштабирование метки подхода
+function scaleSet(lbl,t,week){
+  if(!isCustom()) return lbl;
+  if(t==="pu"){ const f=puFactor();
+    if(/^\+\d+$/.test(lbl)) return "+"+fmtKg(+lbl.slice(1)*f);
+    if(/^\d+@\+\d+$/.test(lbl)) return lbl.replace(/@\+(\d+)/,(m,n)=>"@+"+fmtKg(+n*f));
+    return lbl;
+  }
+  const f=dlFactor(week);
+  if(/^разм/i.test(lbl)) return lbl;
+  if(/^\d+@\d+$/.test(lbl)){ const p=lbl.split("@"); return p[0]+"@"+fmtKg(+p[1]*f); }
+  if(/^\d+$/.test(lbl)){ const n=+lbl; return n>=50 ? fmtKg(n*f) : lbl; }
+  return lbl;
+}
+
+// ── ХРАНИЛИЩЕ ──
+// Работает в Claude (window.storage) и как обычный сайт / GitHub Pages (localStorage)
+const KEY="dl205pu70_v4";
+let state={ sets:{}, weights:{}, settings:{} };
+const hasClaudeStore=(typeof window!=="undefined" && window.storage && typeof window.storage.get==="function");
+const hasLocal=(()=>{ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch(e){ return false; } })();
+
+async function loadState(){
+  try{
+    let raw=null;
+    if(hasClaudeStore){ const r=await window.storage.get(KEY); if(r&&r.value) raw=r.value; }
+    if(!raw && hasLocal){ raw=localStorage.getItem(KEY); }
+    if(raw){ const p=JSON.parse(raw); state.sets=p.sets||{}; state.weights=p.weights||{}; state.settings=p.settings||{}; }
+  }catch(e){}
+}
+let saveT=null;
+async function saveState(flash){
+  try{
+    if(hasClaudeStore){ await window.storage.set(KEY,JSON.stringify(state)); }
+    if(hasLocal){ localStorage.setItem(KEY,JSON.stringify(state)); }
+  }catch(e){}
+  if(flash) showToast("Сохранено", null, null, 850, true);
+}
+
+// ── ТОСТЫ (сохранение / отмена сброса) ──
+let toastT=null;
+function showToast(msg, actLabel, actFn, ms, ok){
+  const t=document.getElementById("toast");
+  t.innerHTML="";
+  const span=document.createElement("span"); span.textContent=(ok?"✓ ":"")+msg; t.appendChild(span);
+  if(actLabel){ const b=document.createElement("button"); b.className="toast-act"; b.textContent=actLabel;
+    b.onclick=()=>{ hideToast(); if(actFn)actFn(); }; t.appendChild(b); }
+  t.classList.toggle("ok", !!ok);
+  t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(hideToast, ms||4000);
+}
+function hideToast(){ document.getElementById("toast").classList.remove("show"); }
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+
+function getDays(w,ph){ return ph.tpl==="wk"?WK[w]:TPL[ph.tpl]; }
+function phaseOf(w){ return PHASES.find(ph=>ph.weeks.includes(w)); }
+function daysOf(w){ return getDays(w, phaseOf(w)); }
+function setId(w,d,ei,si){ return `s_${w}_${d}_${ei}_${si}`; }
+function wId(w,d,ei){ return `w_${w}_${d}_${ei}`; }
+
+let totalSets=0;
+function countTotal(){ totalSets=0; PHASES.forEach(ph=>ph.weeks.forEach(w=>{ const days=getDays(w,ph); Object.keys(days).forEach(d=> days[d].forEach(ex=> totalSets+=ex.sets.length )); })); }
+function countDone(){ let n=0; for(const k in state.sets){ if(state.sets[k])n++; } return n; }
+function dayCounts(w,d){ const days=daysOf(w); let T=0,D=0; days[d].forEach((ex,ei)=> ex.sets.forEach((_,si)=>{ T++; if(state.sets[setId(w,d,ei,si)])D++; }) ); return {T,D}; }
+function weekDone(w){ const days=daysOf(w); let T=0,D=0; Object.keys(days).forEach(d=>{ const c=dayCounts(w,d); T+=c.T; D+=c.D; }); return {T,D,full:(T>0&&D===T)}; }
+
+// Следующая незакрытая сессия (фаза → неделя → день)
+function nextSession(){
+  for(const ph of PHASES){ for(const w of ph.weeks){ const days=getDays(w,ph);
+    for(const d of Object.keys(days)){ const c=dayCounts(w,d); if(c.D<c.T) return {w,d,ph}; } } }
+  return null;
+}
+
+// ── КАРТОЧКА «СЕГОДНЯ» ──
+function renderToday(){
+  const host=document.getElementById("today"); host.innerHTML="";
+  const ns=nextSession();
+  const card=document.createElement("div"); card.className="today";
+  if(!ns){
+    card.classList.add("done");
+    card.innerHTML=`<div class="today-kick"><span class="dot" style="background:var(--done)"></span>Цикл завершён</div>
+      <div class="today-done-msg">🎉 Все 20 недель закрыты. Снимай PR и ставь новый макс.</div>`;
+    host.appendChild(card); return;
+  }
+  const {w,d,ph}=ns; const days=getDays(w,ph); const c=dayCounts(w,d); const left=c.T-c.D;
+  let exHtml="";
+  days[d].forEach(ex=>{
+    if(ex.t==="ar") return;
+    const sub=scaleSub(ex.s,ex.t,w);
+    exHtml+=`<div class="today-ex"><span class="nm">${ex.n}</span>${sub?`<span class="tg">${sub.split(" · ")[0]}</span>`:""}</div>`;
+  });
+  card.innerHTML=`
+    <div class="today-kick"><span class="dot" style="background:${ph.color}"></span>Сейчас · ${ph.name} · неделя ${w}/20</div>
+    <div class="today-day">${DAYLBL[d]}</div>
+    <div class="today-meta">Осталось подходов: <b>${left}</b> из ${c.T}${c.D>0?" · уже начато":""}</div>
+    ${exHtml}
+    <button class="today-cta" id="todayCta">${c.D>0?"Продолжить тренировку":"Начать тренировку"} →</button>`;
+  host.appendChild(card);
+  document.getElementById("todayCta").onclick=()=>jumpTo(w,d);
+}
+
+function jumpTo(w,d){
+  const wd=document.querySelector(`details.week[data-week="${w}"]`); if(!wd) return;
+  document.querySelectorAll("details.week[open]").forEach(el=>{ if(el!==wd) el.open=false; });
+  wd.open=true;
+  const dd=wd.querySelector(`details.dayd[data-day="${d}"]`); if(dd) dd.open=true;
+  setTimeout(()=>{ (dd||wd).scrollIntoView({behavior:"smooth", block:"start"}); }, 60);
+}
+
+// ── ГРАФИК ПРОГРЕССА ──
+function loadsIn(text,t){ const out=[]; if(!text) return out; let m;
+  if(t==="dl"){ const re=/@(\d{2,3})|(\d{2,3})\s*кг|\b(1\d\d|2\d\d)\b(?!\s*%)/g;
+    while(m=re.exec(text)) out.push(+(m[1]||m[2]||m[3])); }
+  else { const re=/\+(\d{1,3})|(\d{2,3})\s*кг/g;
+    while(m=re.exec(text)) out.push(+(m[1]||m[2])); }
+  return out;
+}
+function weekTop(w,t){ const days=daysOf(w); let mx=0;
+  Object.keys(days).forEach(d=> days[d].forEach(ex=>{ if(ex.t!==t) return;
+    loadsIn(ex.s,t).forEach(v=>{ if(v>mx)mx=v; });
+    ex.sets.forEach(lbl=> loadsIn(lbl,t).forEach(v=>{ if(v>mx)mx=v; }) );
+  }));
+  if(!mx) return 0; const f = t==="dl"?dlFactor(w):puFactor(); return round25(mx*f);
+}
+function renderGraph(){
+  const W=340,H=180,padL=30,padR=12,padT=14,padB=22;
+  const weeks=[]; for(let w=1;w<=20;w++) weeks.push(w);
+  const dlv=weeks.map(w=>weekTop(w,"dl"));
+  const puv=weeks.map(w=>weekTop(w,"pu"));
+  const s=st();
+  const ymax=Math.max(s.dlGoal*1.05, Math.max(...dlv)*1.02, 10);
+  const X=w=> padL + (w-1)/19*(W-padL-padR);
+  const Y=v=> H-padB - (v/ymax)*(H-padT-padB);
+  const cur=nextSession();
+  const path=arr=>arr.map((v,i)=> (i?"L":"M")+X(i+1).toFixed(1)+" "+Y(v).toFixed(1)).join(" ");
+  function dots(arr,color){ return arr.map((v,i)=>{ const w=i+1; const done=weekDone(w).full;
+    const isCur=cur&&cur.w===w;
+    const r=isCur?4.5:3.2;
+    const fill=done?color:"#11141a";
+    const stroke=isCur?"#fff":color;
+    return `<circle cx="${X(w).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isCur?2:1.6}"/>`;
+  }).join(""); }
+  // целевые пунктиры
+  const gDl=Y(s.dlGoal), gPu=Y(s.puGoal);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="График запланированной топ-нагрузки по неделям: становая выходит на ${s.dlGoal} кг, подтягивания на +${s.puGoal} кг к 20-й неделе">`;
+  // сетка недель 1,5,10,15,20
+  [1,5,10,15,20].forEach(w=>{ const x=X(w).toFixed(1);
+    svg+=`<line x1="${x}" y1="${padT}" x2="${x}" y2="${H-padB}" stroke="#22262e" stroke-width="1"/>`;
+    svg+=`<text x="${x}" y="${H-7}" fill="#7c828e" font-size="9" text-anchor="middle">${w}</text>`;
+  });
+  // целевые линии
+  svg+=`<line x1="${padL}" y1="${gDl.toFixed(1)}" x2="${W-padR}" y2="${gDl.toFixed(1)}" stroke="var(--dl)" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
+  svg+=`<text x="${W-padR}" y="${(gDl-4).toFixed(1)}" fill="var(--dl)" font-size="9" text-anchor="end">цель ${s.dlGoal}</text>`;
+  svg+=`<line x1="${padL}" y1="${gPu.toFixed(1)}" x2="${W-padR}" y2="${gPu.toFixed(1)}" stroke="var(--pu)" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
+  svg+=`<text x="${W-padR}" y="${(gPu-4).toFixed(1)}" fill="var(--pu)" font-size="9" text-anchor="end">цель +${s.puGoal}</text>`;
+  // оси Y подписи
+  svg+=`<text x="4" y="${(Y(s.dlGoal)+3).toFixed(1)}" fill="#7c828e" font-size="9">${s.dlGoal}</text>`;
+  svg+=`<text x="4" y="${(Y(0)).toFixed(1)}" fill="#7c828e" font-size="9">0</text>`;
+  // линии
+  svg+=`<path d="${path(dlv)}" fill="none" stroke="var(--dl)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  svg+=`<path d="${path(puv)}" fill="none" stroke="var(--pu)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  svg+=dots(dlv,"var(--dl)")+dots(puv,"var(--pu)");
+  svg+=`</svg>`;
+  const body=document.getElementById("graphBody");
+  body.innerHTML=svg+`<div class="graph-leg">
+    <span><i style="background:var(--dl)"></i>Становая, кг</span>
+    <span><i style="background:var(--pu)"></i>Подтягивания, +кг</span>
+    <span><i style="background:var(--done);border-radius:50%;width:8px;height:8px"></i>неделя закрыта</span>
+  </div>`;
+}
+
+// ── ШАПКА / ЛЕГЕНДА (динамические по настройкам) ──
+function renderHeaderBits(){
+  const s=st();
+  document.getElementById("hTitle").innerHTML=`Становая <b>${s.dlGoal}</b> · Подтягивания <i>+${s.puGoal}</i>`;
+  document.getElementById("legend").innerHTML=
+    `Старт: тяга <b>${s.dlStart}</b> · цель цикла <b>${s.dlGoal} / +${s.puGoal}</b>` +
+    `${s.dlGoal<205?` <span style="color:var(--tx3)">(далее → 205)</span>`:""} &nbsp;·&nbsp; ` +
+    `% — от текущего макса (растёт по блокам), кг уже посчитаны &nbsp;·&nbsp; RPE — целевое усилие, держи 1–2 повтора в запасе`;
+}
+
+// ── ОСНОВНОЙ РЕНДЕР ПРОГРАММЫ ──
+function render(){
+  const app=document.getElementById("app"); app.innerHTML=""; let firstInc=null;
+  const cur=nextSession();
+  PHASES.forEach(ph=>{
+    const ph_h=document.createElement("div"); ph_h.className="phase-h";
+    ph_h.innerHTML=`<span class="phase-dot" style="background:${ph.color}" aria-hidden="true"></span>
+      <h2 class="phase-name">${ph.name}</h2>
+      <span class="phase-wk">нед. ${ph.weeks[0]}${ph.weeks.length>1?"–"+ph.weeks[ph.weeks.length-1]:""}</span>`;
+    app.appendChild(ph_h);
+
+    ph.weeks.forEach(w=>{
+      const days=getDays(w,ph), dayKeys=Object.keys(days);
+      const wc=weekDone(w);
+      if(!wc.full&&firstInc===null)firstInc=w;
+      const isDel=DELOAD.includes(w);
+      const isCur=cur&&cur.w===w;
+
+      const det=document.createElement("details"); det.className="week"+(isCur?" cur":""); det.dataset.week=w;
+      const sum=document.createElement("summary"); sum.className="week-s";
+      sum.innerHTML=`<span class="wk-stripe" style="background:${ph.color}" aria-hidden="true"></span>
+        <span class="wk-info"><div class="wk-num">Неделя ${w}${isDel?' · 🔻дедоул':''}${isCur?' · сейчас':''}</div><div class="wk-sub">${ph.sub}</div></span>
+        <span class="wk-badge ${wc.full?'full':''}" data-wkbadge="${w}">${wc.D}/${wc.T}</span>
+        <span class="wk-chev" aria-hidden="true">▶</span>`;
+      det.appendChild(sum);
+
+      dayKeys.forEach(d=>{
+        const dayWrap=document.createElement("div"); dayWrap.className="day";
+        const dDet=document.createElement("details"); dDet.className="dayd"; dDet.dataset.day=d; if(d==="pr")dDet.classList.add("pr-day");
+        const dc=dayCounts(w,d); const dFull=dc.D===dc.T;
+        const dSum=document.createElement("summary"); dSum.className="day-s";
+        dSum.innerHTML=`<span class="day-label">${DAYLBL[d]}</span>
+          <span class="day-check ${dFull?'show':''}" data-daycheck="${w}_${d}">✓ готов</span>
+          <span class="day-mini" data-daymini="${w}_${d}">${dc.D}/${dc.T}</span>`;
+        dDet.appendChild(dSum);
+
+        const list=document.createElement("div"); list.className="ex-list";
+        days[d].forEach((ex,ei)=>{
+          const box=document.createElement("div"); box.className="ex2";
+          const TAGMAP={dl:["ТЯГА","tag-dl"],pu:["ПОДТЯГ","tag-pu"],pr:["ЖИМ","tag-pr"],ar:["РУКИ","tag-ar"],sq:["ПРИСЕД","tag-sq"]};
+          const tg=TAGMAP[ex.t]||["",""]; const tag=`<span class="ex2-tag ${tg[1]}" aria-hidden="true">${tg[0]}</span>`;
+          const sub=scaleSub(ex.s,ex.t,w);
+          let pills="";
+          ex.sets.forEach((lbl,si)=>{
+            const id=setId(w,d,ei,si); const on=state.sets[id]?"on":"";
+            const cls = ex.warm.includes(si)?"warm":(ex.goal.includes(si)?"goal":"");
+            const disp=scaleSet(lbl,ex.t,w);
+            const kind=ex.warm.includes(si)?"разминка":(ex.goal.includes(si)?"целевой подход":"подход");
+            const al=`${kind} ${disp}, ${ex.n}, ${state.sets[id]?"выполнен":"не выполнен"}`;
+            pills+=`<button class="setpill ${cls} ${on}" data-set="${id}" aria-pressed="${state.sets[id]?"true":"false"}" aria-label="${al.replace(/"/g,'&quot;')}">${disp}</button>`;
+          });
+          const wv=(state.weights[wId(w,d,ei)]||"").replace(/"/g,"&quot;");
+          const noteId="n_"+wId(w,d,ei);
+          box.innerHTML=`<div class="ex2-head">${tag}<span class="ex2-name">${ex.n}</span>${sub?`<span class="ex2-sub">${sub}</span>`:""}</div>
+            <div class="sets">${pills}</div>
+            <label class="visually-hidden" for="${noteId}" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Вес или заметка: ${ex.n}</label>
+            <input class="wnote" id="${noteId}" data-wnote="${wId(w,d,ei)}" value="${wv}" autocomplete="off" placeholder="вес / заметка — напр. 150 кг, легко…">`;
+          list.appendChild(box);
+        });
+        dDet.appendChild(list); dayWrap.appendChild(dDet); det.appendChild(dayWrap);
+      });
+      app.appendChild(det);
+    });
+  });
+
+  if(firstInc!==null){ const el=app.querySelector(`details.week[data-week="${firstInc}"]`); if(el)el.open=true; }
+  attach(); updateProgress();
+}
+
+function attach(){
+  document.querySelectorAll("[data-set]").forEach(p=>{
+    p.onclick=()=>{ const id=p.dataset.set; const now=!state.sets[id]; state.sets[id]=now;
+      p.classList.toggle("on",now); p.setAttribute("aria-pressed", now?"true":"false");
+      if(now) buzz(12);
+      refreshCounts(); renderToday(); renderGraph(); saveState(true); };
+  });
+  document.querySelectorAll("[data-wnote]").forEach(inp=>{
+    inp.oninput=()=>{ state.weights[inp.dataset.wnote]=inp.value; clearTimeout(saveT); saveT=setTimeout(()=>saveState(true),700); };
+  });
+}
+
+function refreshCounts(){
+  PHASES.forEach(ph=>ph.weeks.forEach(w=>{
+    const days=getDays(w,ph); let wkT=0,wkD=0;
+    Object.keys(days).forEach(d=>{
+      const c=dayCounts(w,d); wkT+=c.T; wkD+=c.D;
+      const mini=document.querySelector(`[data-daymini="${w}_${d}"]`); if(mini)mini.textContent=`${c.D}/${c.T}`;
+      const chk=document.querySelector(`[data-daycheck="${w}_${d}"]`); if(chk)chk.classList.toggle("show",c.D===c.T);
+    });
+    const b=document.querySelector(`[data-wkbadge="${w}"]`); if(b){ b.textContent=`${wkD}/${wkT}`; b.classList.toggle("full",wkD===wkT&&wkT>0); }
+  }));
+  updateProgress();
+}
+function updateProgress(){ const d=countDone(); const pct=totalSets?Math.round(d/totalSets*100):0;
+  document.getElementById("progFill").style.width=pct+"%";
+  document.getElementById("progPct").textContent=pct+"%";
+  const bar=document.getElementById("progBar");
+  bar.setAttribute("aria-valuenow", pct);
+  bar.setAttribute("aria-valuetext", `${pct}% · ${d} из ${totalSets} подходов`);
+}
+
+// ── СБРОС с возможностью отмены ──
+document.getElementById("resetBtn").onclick=()=>{
+  const backup=JSON.stringify({sets:state.sets,weights:state.weights});
+  state.sets={}; state.weights={};
+  saveState(false); render(); renderToday(); renderGraph();
+  showToast("Прогресс сброшен", "Отменить", ()=>{
+    const b=JSON.parse(backup); state.sets=b.sets; state.weights=b.weights;
+    saveState(false); render(); renderToday(); renderGraph();
+    showToast("Возвращено", null, null, 1200, true);
+  }, 6000);
+};
+
+// ── НАСТРОЙКИ ──
+const settingsEl=document.getElementById("settings");
+const settingsBtn=document.getElementById("settingsBtn");
+function syncSettingInputs(){ const s=st();
+  document.getElementById("setDlStart").value=s.dlStart;
+  document.getElementById("setDlGoal").value=s.dlGoal;
+  document.getElementById("setPuGoal").value=s.puGoal; }
+settingsBtn.onclick=()=>{ const open=settingsEl.hidden; settingsEl.hidden=!open;
+  settingsBtn.setAttribute("aria-expanded", open?"true":"false");
+  if(open){ syncSettingInputs(); settingsEl.scrollIntoView({behavior:"smooth",block:"nearest"}); } };
+function applySettings(){
+  const ds=parseFloat(document.getElementById("setDlStart").value);
+  const dg=parseFloat(document.getElementById("setDlGoal").value);
+  const pg=parseFloat(document.getElementById("setPuGoal").value);
+  state.settings={
+    dlStart: isFinite(ds)&&ds>0?ds:DEF.dlStart,
+    dlGoal:  isFinite(dg)&&dg>0?dg:DEF.dlGoal,
+    puGoal:  isFinite(pg)&&pg>=0?pg:DEF.puGoal
+  };
+  saveState(false); renderHeaderBits(); render(); renderToday(); renderGraph();
+}
+let setT=null;
+["setDlStart","setDlGoal","setPuGoal"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",()=>{ clearTimeout(setT); setT=setTimeout(applySettings,500); });
+});
+document.getElementById("resetSettings").onclick=()=>{ state.settings={}; syncSettingInputs();
+  saveState(false); renderHeaderBits(); render(); renderToday(); renderGraph();
+  showToast("Вернул исходные 140 / 170 / +70", null, null, 1600, true); };
+
+// ── УСТАНОВКА PWA ──
+let deferredPrompt=null;
+const installBtn=document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; installBtn.hidden=false; });
+installBtn.onclick=async()=>{ if(deferredPrompt){ deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch(e){} deferredPrompt=null; installBtn.hidden=true; } };
+window.addEventListener("appinstalled",()=>{ installBtn.hidden=true; showToast("Установлено на устройство", null, null, 1600, true); });
+(function iosHint(){
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone=window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+  const el=document.getElementById("installHint");
+  if(isIOS && !standalone){ el.textContent="На iPhone: «Поделиться» → «На экран «Домой»»."; }
+})();
+
+// ── СТАРТ ──
+(async function init(){ countTotal(); await loadState(); renderHeaderBits(); render(); renderToday(); renderGraph(); })();
+
+// Офлайн-режим (работает на хостинге, напр. GitHub Pages)
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+</script>
+</body>
+</html>
