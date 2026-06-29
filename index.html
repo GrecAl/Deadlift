@@ -182,8 +182,8 @@
   .day-head::-webkit-details-marker{ display:none; }
   .day-stripe{ width:4px; align-self:stretch; min-height:30px; border-radius:4px; flex-shrink:0; box-shadow:0 0 10px currentColor; }
   .day-h-info{ flex:1; min-width:0; }
-  .day-h-name{ font-size:15px; font-weight:800; }
-  .day-h-sub{ font-size:12px; color:var(--tx3); margin-top:1px; }
+  .day-h-name{ font-size:15px; font-weight:800; display:block; }
+  .day-h-sub{ display:block; font-size:11.5px; color:#bcc4d2; margin-top:3px; font-weight:600; }
   .day-h-badge{ font-size:11.5px; font-weight:800; padding:5px 10px; border-radius:20px; background:var(--surface3); color:var(--tx2); white-space:nowrap; }
   .day-h-badge.full{ background:rgba(33,255,142,0.14); color:var(--ok); box-shadow:0 0 12px rgba(33,255,142,0.18); }
   .day-chev{ color:var(--tx3); font-size:13px; transition:transform .2s ease; }
@@ -497,10 +497,10 @@ const WD = {
 };
 
 const DAYDEF = {
-  d1:{ name:"День 1 · Тяжёлый", sub:"Становая в силовом режиме + тяжёлые подтягивания" },
-  d2:{ name:"День 2 · Скорость и слабое звено", sub:"Динамика, вариации тяги, присед, объём подтягиваний" },
-  d3:{ name:"День 3 · Жим и руки", sub:"Армейский жим сидя + бицепс + трицепс" },
-  pr:{ name:"День попыток 🎯", sub:"Разминка → подходы к максимуму, свежим" },
+  d1:{ name:"День 1 · Тяжёлый", sub:"Становая + подтягивания" },
+  d2:{ name:"День 2 · Скорость", sub:"Вариации тяги, присед" },
+  d3:{ name:"День 3 · Жим и руки", sub:"Жим сидя + бицепс + трицепс" },
+  pr:{ name:"День попыток 🎯", sub:"Подходы к максимуму" },
 };
 const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], arm:["РУКИ","tg-arm"] };
 

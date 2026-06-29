@@ -1,5 +1,5 @@
 // Офлайн-кэш приложения. Версию меняй при обновлении файлов.
-const CACHE = "dl205-v6";
+const CACHE = "dl205-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,6 +24,23 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+
+  // Навигация (HTML-страница) — СЕТЬ В ПРИОРИТЕТЕ: всегда свежая версия,
+  // кэш только как офлайн-фолбэк. Так обновления видны сразу, без борьбы с кэшем.
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((resp) => {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put("./index.html", copy));
+          return resp;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  // Остальные ресурсы (иконки, манифест) — КЭШ В ПРИОРИТЕТЕ.
   e.respondWith(
     caches.match(e.request).then((cached) => {
       if (cached) return cached;
@@ -33,7 +50,7 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, copy));
           return resp;
         })
-        .catch(() => e.request.mode === "navigate" ? caches.match("./index.html") : Response.error());
+        .catch(() => Response.error());
     })
   );
 });
