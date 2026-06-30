@@ -212,6 +212,7 @@
   .tg-pu{ background:rgba(33,212,253,0.16); color:var(--pu); box-shadow:0 0 12px rgba(33,212,253,0.12); }
   .tg-sq{ background:rgba(192,107,255,0.16); color:var(--sq); }
   .tg-press{ background:rgba(33,255,142,0.14); color:var(--ok); }
+  .tg-chest{ background:rgba(255,46,107,0.16); color:#ff6b94; }
   .tg-arm{ background:rgba(153,162,178,0.14); color:var(--tx2); }
   .ex-name{ font-size:14.5px; font-weight:800; flex:1; min-width:0; }
   .ex-note{ font-size:11.5px; color:var(--tx2); flex-basis:100%; }
@@ -497,12 +498,12 @@ const WD = {
 };
 
 const DAYDEF = {
-  d1:{ name:"День 1 · Тяжёлый", sub:"Становая + подтягивания" },
-  d2:{ name:"День 2 · Скорость", sub:"Вариации тяги, присед" },
-  d3:{ name:"День 3 · Жим и руки", sub:"Жим сидя + бицепс + трицепс" },
+  d1:{ name:"Deadlift/pull strong", sub:"Тяга тяжёлая · подтяг. лёгкие · присед" },
+  d2:{ name:"Deadlift/pull weak", sub:"Подтяг. тяжёлые · тяга лёгкая" },
+  d3:{ name:"Push", sub:"Жим сидя · грудь · трицепс" },
   pr:{ name:"День попыток 🎯", sub:"Подходы к максимуму" },
 };
-const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], arm:["РУКИ","tg-arm"] };
+const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], arm:["РУКИ","tg-arm"] };
 
 function dlSets(top, bk){ const s=[{ reps:top[0], kg:top[1], rpe:top[2], tag:"top" }];
   if(bk){ for(let i=0;i<bk[2];i++) s.push({ reps:bk[0], kg:bk[1], rpe:null, tag:"work" }); } return s; }
@@ -526,20 +527,21 @@ function buildWeek(w){
     ] } ] };
   }
   const days=[];
+  // День 1 — Deadlift/pull strong: тяжёлая становая + лёгкие подтягивания + присед (2 подхода)
   days.push({ key:"d1", name:DAYDEF.d1.name, sub:DAYDEF.d1.sub, ex:[
-    { type:"dl", name:"Становая классика", note:"Жёсткий съём с пола, спина нейтральна, разгон тазом.", sets:dlSets(d.dl, d.bk) },
-    { type:"pu", name:"Подтягивания с весом — тяжёлые", note:"Полная амплитуда, подбородок над перекладиной.", sets:puSets(d.pt) },
+    { type:"dl", name:"Становая классика — тяжёлая", note:"Жёсткий съём с пола, спина нейтральна, разгон тазом.", sets:dlSets(d.dl, d.bk) },
+    { type:"pu", name:"Подтягивания с весом — лёгкие", note:"Объёмно, в запасе 2–3 повтора, чистая техника.", sets:puVol(d.pv) },
+    { type:"sq", name:"Передний присед", note:"Поддержка: 2 подхода, кор и квадрицепс.", sets:repSets(d.fsq[0], 2, 7) },
   ] });
-  const d2=[ { type:"dl", name:"Скоростная тяга", note:"Лёгкий вес, максимальный разгон. Отдых 60–90 с.", sets:spSets(d.sp) } ];
-  if(d.vr) d2.push({ type:"dl", name:d.vr[0], note:"Доводка слабой точки — съём с пола.", sets:repSets(d.vr[1], d.vr[3], d.vr[4], d.vr[2]) });
-  d2.push({ type:"sq", name:"Передний присед", note:"Кор и квадрицепс, фронт-стойка.", sets:repSets(d.fsq[0], d.fsq[1], 7) });
-  d2.push({ type:"pu", name:"Подтягивания с весом — объём", note:"Контролируемый темп, качество повтора.", sets:puVol(d.pv) });
-  d2.push({ type:"arm", name:"Бицепс со штангой", note:"Финишер, без раскачки.", sets:repSets("8–12", 2, 8) });
-  days.push({ key:"d2", name:DAYDEF.d2.name, sub:DAYDEF.d2.sub, ex:d2 });
+  // День 2 — Deadlift/pull weak: тяжёлые подтягивания + лёгкая становая
+  days.push({ key:"d2", name:DAYDEF.d2.name, sub:DAYDEF.d2.sub, ex:[
+    { type:"pu", name:"Подтягивания с весом — тяжёлые", note:"Полная амплитуда, подбородок над перекладиной.", sets:puSets(d.pt) },
+    { type:"dl", name:"Становая — лёгкая / скоростная", note:"Лёгкий вес, идеальная техника и разгон. Отдых 60–90 с.", sets:spSets(d.sp) },
+  ] });
   // День 3 — жим сидя + руки
   days.push({ key:"d3", name:DAYDEF.d3.name, sub:DAYDEF.d3.sub, ex:[
     { type:"press", name:"Армейский жим сидя", note:"Средний вес, 5–10 чистых повторов, спина к спинке.", sets:repSets("5–10", 3, 8) },
-    { type:"arm", name:"Бицепс со штангой", note:"Подъём на бицепс стоя, без раскачки.", sets:repSets("8–12", 2, 8) },
+    { type:"chest", name:"Кроссовер на грудь", note:"Поддержка: 2 подхода, чистое сведение, без рывков.", sets:repSets("12–15", 2, 8) },
     { type:"arm", name:"Трицепс", note:"Французский жим / брусья / разгибания.", sets:repSets("12–15", 2, 8) },
   ] });
   return { days };
@@ -730,7 +732,8 @@ function setRowHtml(w, dkey, ei, si, set, type){
   const placeR = (typeof set.reps==="number")?set.reps:"";
   const kgVal=e&&e.kg!=null?e.kg:"", repsVal=e&&e.reps!=null?e.reps:"", rpeVal=e&&e.rpe!=null?e.rpe:"";
   const on = isDone(id)?"on":"";
-  const showE1 = (!isPu && e && e.kg && e.reps) ? `e1ПМ ${fmtKg(round25(e1rmOf(+e.kg,+e.reps)))}` : "";
+  const e1types = (type==="dl"||type==="sq"||type==="press");
+  const showE1 = (e1types && e && e.kg && e.reps) ? `e1ПМ ${fmtKg(round25(e1rmOf(+e.kg,+e.reps)))}` : "";
   return `<div class="set-row">
     <div class="set-no ${noCls}">${noLabel}</div>
     <div class="set-main">
@@ -822,7 +825,7 @@ function updateE1(id){
   const span=document.querySelector(`[data-e1="${id}"]`); if(!span) return;
   const parts=id.split("."); const w=+parts[0], dkey=parts[1], ei=+parts[2];
   const ex=week(w).days.find(x=>x.key===dkey).ex[ei]; const e=lg(id);
-  if(ex.type==="pu"){ span.textContent=""; return; }
+  if(!(ex.type==="dl"||ex.type==="sq"||ex.type==="press")){ span.textContent=""; return; }
   span.textContent=(e&&e.kg&&e.reps)?`e1ПМ ${fmtKg(round25(e1rmOf(+e.kg,+e.reps)))}`:"";
 }
 function refreshCounts(){
