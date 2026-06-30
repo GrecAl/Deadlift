@@ -222,9 +222,14 @@
   .set-no{ font-size:10.5px; color:var(--tx3); font-weight:800; text-align:center; text-transform:uppercase; }
   .set-no.top{ color:var(--dl); text-shadow:0 0 8px var(--dl-g); } .set-no.attempt{ color:var(--pr); text-shadow:0 0 8px var(--pr-g); }
   .set-main{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .set-target{ font-size:12.5px; color:var(--tx2); min-width:92px; }
+  .set-target{ font-size:12.5px; color:var(--tx2); min-width:92px; text-align:left; }
+  button.set-target{ background:none; border:none; font-family:inherit; cursor:pointer; padding:6px 8px; margin:-6px -8px; border-radius:9px; min-height:34px; }
+  button.set-target:hover{ background:rgba(33,212,253,0.1); }
+  button.set-target::after{ content:"⤵"; color:var(--accent2); font-size:0.9em; margin-left:6px; opacity:0.75; }
+  button.set-target:active{ background:rgba(33,212,253,0.18); }
   .set-target b{ color:var(--tx); font-weight:800; }
   .set-target .rpe{ color:var(--tx3); font-size:11px; }
+  .ex-prev{ flex-basis:100%; font-size:11px; color:var(--accent2); font-weight:700; margin-top:4px; opacity:0.92; }
   .set-inputs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .inp{ background:var(--bg); border:1px solid var(--line); border-radius:9px; color:var(--tx); font-size:16px;
     font-weight:700; padding:9px 6px; width:60px; min-height:44px; text-align:center; font-variant-numeric:tabular-nums; -moz-appearance:textfield; }
@@ -632,6 +637,26 @@ function bestPu(){ let best=0; WEEKS.forEach(w=> week(w).days.forEach(d=> d.ex.f
   ex.sets.forEach((_,si)=>{ const e=lg(setId(w,d.key,ei,si)); if(e&&e.done&&e.kg!=null&&+e.reps>=1){ if(+e.kg>best)best=+e.kg; } }); }))); return best; }
 function tonnage(){ let t=0; for(const k in state.log){ const e=state.log[k]; if(e&&e.done&&e.kg&&e.reps) t+=(+e.kg)*(+e.reps); } return t; }
 
+// «Прошлый раз»: самый недавний (по предыдущим неделям) залогированный результат того же упражнения
+function lastResultFor(curWeek, exName){
+  for(let w=curWeek-1; w>=1; w--){
+    for(const d of week(w).days){
+      const ei=d.ex.findIndex(x=>x.name===exName); if(ei<0) continue;
+      const ex=d.ex[ei]; let best=null;
+      ex.sets.forEach((s,si)=>{ const e=lg(setId(w,d.key,ei,si));
+        if(e&&e.done&&e.kg!=null&&e.reps!=null){ if(!best || +e.kg>+best.kg) best={kg:+e.kg, reps:e.reps}; } });
+      if(best) return { week:w, kg:best.kg, reps:best.reps };
+    }
+  }
+  return null;
+}
+function prevLabel(prev, type){
+  if(!prev) return "";
+  if(type==="pu") return `↩ Прошлый раз · нед ${prev.week}: +${fmtKg(prev.kg)}×${prev.reps}`;
+  const e1=(type==="dl"||type==="sq"||type==="press")?` · e1ПМ ${fmtKg(round25(e1rmOf(prev.kg,prev.reps)))}`:"";
+  return `↩ Прошлый раз · нед ${prev.week}: ${fmtKg(prev.kg)}×${prev.reps}${e1}`;
+}
+
 let view = "train";
 let curWeekView = 1;
 
@@ -647,6 +672,7 @@ function renderGoals(){
   document.getElementById("legend").innerHTML =
     `<b>Как читать:</b> вес посчитан в кг под твой старт ${fmtKg(s.dlStart)} → цель ${fmtKg(s.dlGoal)} (подтягивания +${fmtKg(s.puStart)} → +${fmtKg(s.puGoal)}). ` +
     `RPE — целевое усилие, держи 1–2 повтора в запасе. В подходе запиши <b>факт. вес × повторы</b> и нажми ✓ — посчитается e1ПМ. ` +
+    `Тап по плану <b>⤵</b> подставит цифры в поля. «<b>↩ Прошлый раз</b>» — твой результат с прошлой недели. ` +
     `Отметь <b>дату</b> сверху каждого дня. 🔻 — разгрузка.`;
 }
 
@@ -734,10 +760,16 @@ function setRowHtml(w, dkey, ei, si, set, type){
   const on = isDone(id)?"on":"";
   const e1types = (type==="dl"||type==="sq"||type==="press");
   const showE1 = (e1types && e && e.kg && e.reps) ? `e1ПМ ${fmtKg(round25(e1rmOf(+e.kg,+e.reps)))}` : "";
+  const fillKg = isPu ? (ld.plus!=null?fmtKg(ld.plus):"") : (ld.kg!=null?fmtKg(ld.kg):"");
+  const fillReps = (typeof set.reps==="number") ? set.reps : "";
+  const targetInner = `<b>${targetMain}</b>${rpe}`;
+  const targetEl = (fillKg!==""||fillReps!=="")
+    ? `<button type="button" class="set-target" data-fillid="${id}" data-fkg="${fillKg}" data-freps="${fillReps}" aria-label="Подставить план ${targetMain} в поля">${targetInner}</button>`
+    : `<div class="set-target">${targetInner}</div>`;
   return `<div class="set-row">
     <div class="set-no ${noCls}">${noLabel}</div>
     <div class="set-main">
-      <div class="set-target"><b>${targetMain}</b>${rpe}</div>
+      ${targetEl}
       <div class="set-inputs">
         <div class="inp-wrap"><input class="inp k" data-log="${id}" data-f="kg" type="number" inputmode="decimal" step="2.5" value="${kgVal}" placeholder="${placeKg}" aria-label="${isPu?"доп. вес кг":"вес кг"}, подход ${si+1}"><span class="inp-lbl">${isPu?"+кг":"кг"}</span></div>
         <div class="inp-wrap"><input class="inp r" data-log="${id}" data-f="reps" type="number" inputmode="numeric" step="1" value="${repsVal}" placeholder="${placeR}" aria-label="повторы, подход ${si+1}"><span class="inp-lbl">повт</span></div>
@@ -777,9 +809,11 @@ function renderWeekBody(){
     d.ex.forEach((ex,ei)=>{
       const tg=TAGS[ex.type]||["",""];
       let rows=""; ex.sets.forEach((set,si)=> rows+=setRowHtml(w,d.key,ei,si,set,ex.type) );
+      const prev=lastResultFor(w, ex.name);
+      const prevHtml = prev ? `<span class="ex-prev">${prevLabel(prev, ex.type)}</span>` : "";
       const box=document.createElement("div"); box.className="ex";
       box.innerHTML=`<div class="ex-head"><span class="ex-tag ${tg[1]}" aria-hidden="true">${tg[0]}</span>
-        <span class="ex-name">${ex.name}</span>${ex.note?`<span class="ex-note">${ex.note}</span>`:""}</div>${rows}`;
+        <span class="ex-name">${ex.name}</span>${ex.note?`<span class="ex-note">${ex.note}</span>`:""}${prevHtml}</div>${rows}`;
       body.appendChild(box);
     });
     det.appendChild(body); host.appendChild(det);
@@ -809,6 +843,17 @@ function attachWeek(){
   document.querySelectorAll("[data-log]").forEach(inp=>{
     inp.oninput=()=>{ const id=inp.dataset.log, f=inp.dataset.f, e=ensureLog(id); const v=inp.value.trim();
       e[f] = v===""?null:(f==="reps"?parseInt(v,10):parseFloat(v)); updateE1(id); saveSoon(); };
+  });
+  // быстрое заполнение: тап по плану подставляет цифры в поля факта
+  document.querySelectorAll("[data-fillid]").forEach(b=>{
+    b.onclick=()=>{
+      const id=b.dataset.fillid, fkg=b.dataset.fkg, freps=b.dataset.freps;
+      const k=document.querySelector(`input[data-log="${id}"][data-f="kg"]`);
+      const r=document.querySelector(`input[data-log="${id}"][data-f="reps"]`);
+      if(fkg!=="" && k){ k.value=fkg; k.dispatchEvent(new Event("input",{bubbles:true})); }
+      if(freps!=="" && r){ r.value=freps; r.dispatchEvent(new Event("input",{bubbles:true})); }
+      buzz(8);
+    };
   });
   document.querySelectorAll("[data-date]").forEach(inp=>{
     inp.onchange=()=>{ const id=inp.dataset.date; state.dates[id]=inp.value||""; updateDateRel(id); renderToday(); saveState(true); };
