@@ -221,7 +221,7 @@
   .set-row:first-of-type{ border-top:none; }
   .set-no{ font-size:10.5px; color:var(--tx3); font-weight:800; text-align:center; text-transform:uppercase; }
   .set-no.top{ color:var(--dl); text-shadow:0 0 8px var(--dl-g); } .set-no.attempt{ color:var(--pr); text-shadow:0 0 8px var(--pr-g); }
-  .set-main{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .set-main{ display:flex; flex-direction:column; align-items:flex-start; gap:9px; }
   .set-target{ font-size:12.5px; color:var(--tx2); min-width:92px; text-align:left; }
   button.set-target{ background:none; border:none; font-family:inherit; cursor:pointer; padding:6px 8px; margin:-6px -8px; border-radius:9px; min-height:34px; }
   button.set-target:hover{ background:rgba(33,212,253,0.1); }
@@ -229,6 +229,7 @@
   button.set-target:active{ background:rgba(33,212,253,0.18); }
   .set-target b{ color:var(--tx); font-weight:800; }
   .set-target .rpe{ color:var(--tx3); font-size:11px; }
+  .plan-tag{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--tx3); margin-right:8px; }
   .ex-prev{ flex-basis:100%; font-size:11px; color:var(--accent2); font-weight:700; margin-top:4px; opacity:0.92; }
   .set-inputs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .inp{ background:var(--bg); border:1px solid var(--line); border-radius:9px; color:var(--tx); font-size:16px;
@@ -510,11 +511,12 @@ const DAYDEF = {
 };
 const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], arm:["РУКИ","tg-arm"] };
 
-function dlSets(top, bk){ const s=[{ reps:top[0], kg:top[1], rpe:top[2], tag:"top" }];
-  if(bk){ for(let i=0;i<bk[2];i++) s.push({ reps:bk[0], kg:bk[1], rpe:null, tag:"work" }); } return s; }
-function spSets(sp){ const s=[]; for(let i=0;i<sp[2];i++) s.push({ reps:sp[0], kg:sp[1], rpe:null, tag:"speed" }); return s; }
-function puSets(p){ const s=[]; for(let i=0;i<p[2];i++) s.push({ reps:p[0], plus:p[1], rpe:(i===0?p[3]:null), tag:(i===0?"top":"work") }); return s; }
-function puVol(p){ const s=[]; for(let i=0;i<p[2];i++) s.push({ reps:p[0], plus:p[1], rpe:null, tag:"work" }); return s; }
+// 2 рабочих подхода в основных движениях (и в тяжёлый, и в лёгкий день)
+function dlSets(top, bk){ return [ { reps:top[0], kg:top[1], rpe:top[2], tag:"top" },
+  bk ? { reps:bk[0], kg:bk[1], rpe:null, tag:"work" } : { reps:top[0], kg:top[1], rpe:null, tag:"work" } ]; }
+function spSets(sp){ return [ { reps:sp[0], kg:sp[1], rpe:null, tag:"speed" }, { reps:sp[0], kg:sp[1], rpe:null, tag:"speed" } ]; }
+function puSets(p){ return [ { reps:p[0], plus:p[1], rpe:p[3], tag:"top" }, { reps:p[0], plus:p[1], rpe:null, tag:"work" } ]; }
+function puVol(p){ return [ { reps:p[0], plus:p[1], rpe:null, tag:"work" }, { reps:p[0], plus:p[1], rpe:null, tag:"work" } ]; }
 function repSets(reps, sets, rpe, kg){ const s=[]; for(let i=0;i<sets;i++) s.push({ reps, kg:(kg!=null?kg:null), rpe:(i===0?rpe:null), tag:"work" }); return s; }
 
 function buildWeek(w){
@@ -750,7 +752,7 @@ function setRowHtml(w, dkey, ei, si, set, type){
   const ld=scaleSetLoad(set, type, w); const isPu = type==="pu";
   let tgt; if(isPu) tgt = ld.plus!=null?`+${fmtKg(ld.plus)} кг`:"своим весом";
   else if(ld.kg!=null) tgt = `${fmtKg(ld.kg)} кг`; else tgt = null;
-  const targetMain = tgt!=null ? `${set.reps} × ${tgt}` : `${set.reps} повт`;
+  const targetMain = tgt!=null ? `${tgt} · ${set.reps} повт` : `${set.reps} повт`;
   const noLabel = {warm:"разм",top:"топ",speed:"скор",attempt:"🎯",opt:"опц"}[set.tag]||("#"+(si+1));
   const noCls = set.tag==="top"?"top":((set.tag==="attempt"||set.tag==="opt")?"attempt":"");
   const rpe = set.rpe!=null?`<span class="rpe"> · RPE ${set.rpe}</span>`:"";
@@ -762,7 +764,7 @@ function setRowHtml(w, dkey, ei, si, set, type){
   const showE1 = (e1types && e && e.kg && e.reps) ? `e1ПМ ${fmtKg(round25(e1rmOf(+e.kg,+e.reps)))}` : "";
   const fillKg = isPu ? (ld.plus!=null?fmtKg(ld.plus):"") : (ld.kg!=null?fmtKg(ld.kg):"");
   const fillReps = (typeof set.reps==="number") ? set.reps : "";
-  const targetInner = `<b>${targetMain}</b>${rpe}`;
+  const targetInner = `<span class="plan-tag">план</span><b>${targetMain}</b>${rpe}`;
   const targetEl = (fillKg!==""||fillReps!=="")
     ? `<button type="button" class="set-target" data-fillid="${id}" data-fkg="${fillKg}" data-freps="${fillReps}" aria-label="Подставить план ${targetMain} в поля">${targetInner}</button>`
     : `<div class="set-target">${targetInner}</div>`;
