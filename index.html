@@ -213,6 +213,7 @@
   .tg-sq{ background:rgba(192,107,255,0.16); color:var(--sq); }
   .tg-press{ background:rgba(33,255,142,0.14); color:var(--ok); }
   .tg-chest{ background:rgba(255,46,107,0.16); color:#ff6b94; }
+  .tg-calf{ background:rgba(79,209,197,0.15); color:#4fd1c5; }
   .tg-arm{ background:rgba(153,162,178,0.14); color:var(--tx2); }
   .ex-name{ font-size:14.5px; font-weight:800; flex:1; min-width:0; }
   .ex-note{ font-size:11.5px; color:var(--tx2); flex-basis:100%; }
@@ -505,11 +506,11 @@ const WD = {
 
 const DAYDEF = {
   d1:{ name:"Deadlift/pull strong", sub:"Тяга тяжёлая · подтяг. лёгкие · присед" },
-  d2:{ name:"Deadlift/pull weak", sub:"Подтяг. тяжёлые · тяга лёгкая" },
+  d2:{ name:"Deadlift/pull weak", sub:"Подтяг. тяжёлые · лёгкая тяга · ноги" },
   d3:{ name:"Push", sub:"Жим сидя · грудь · трицепс" },
   pr:{ name:"День попыток 🎯", sub:"Подходы к максимуму" },
 };
-const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], arm:["РУКИ","tg-arm"] };
+const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], calf:["ИКРЫ","tg-calf"], arm:["РУКИ","tg-arm"] };
 
 // 2 рабочих подхода в основных движениях (и в тяжёлый, и в лёгкий день)
 function dlSets(top, bk){ return [ { reps:top[0], kg:top[1], rpe:top[2], tag:"top" },
@@ -540,10 +541,12 @@ function buildWeek(w){
     { type:"pu", name:"Подтягивания с весом — лёгкие", note:"Объёмно, в запасе 2–3 повтора, чистая техника.", sets:puVol(d.pv) },
     { type:"sq", name:"Передний присед", note:"Поддержка: 2 подхода, кор и квадрицепс.", sets:repSets(d.fsq[0], 2, 7) },
   ] });
-  // День 2 — Deadlift/pull weak: тяжёлые подтягивания + лёгкая становая
+  // День 2 — Deadlift/pull weak: тяжёлые подтягивания + лёгкая становая + присед + икры
   days.push({ key:"d2", name:DAYDEF.d2.name, sub:DAYDEF.d2.sub, ex:[
     { type:"pu", name:"Подтягивания с весом — тяжёлые", note:"Полная амплитуда, подбородок над перекладиной.", sets:puSets(d.pt) },
     { type:"dl", name:"Становая — лёгкая / скоростная", note:"Лёгкий вес, идеальная техника и разгон. Отдых 60–90 с.", sets:spSets(d.sp) },
+    { type:"sq", name:"Присед", note:"На объём: 3 подхода, вес по ощущениям, можно снижать к концу.", sets:repSets("10–15", 3, 8) },
+    { type:"calf", name:"Икры — подъёмы на носки", note:"2 подхода, полная амплитуда, пауза вверху.", sets:repSets("12–15", 2, 8) },
   ] });
   // День 3 — жим сидя + руки
   days.push({ key:"d3", name:DAYDEF.d3.name, sub:DAYDEF.d3.sub, ex:[
