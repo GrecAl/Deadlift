@@ -214,6 +214,7 @@
   .tg-press{ background:rgba(33,255,142,0.14); color:var(--ok); }
   .tg-chest{ background:rgba(255,46,107,0.16); color:#ff6b94; }
   .tg-calf{ background:rgba(79,209,197,0.15); color:#4fd1c5; }
+  .tg-core{ background:rgba(245,196,81,0.15); color:#f5c451; }
   .tg-arm{ background:rgba(153,162,178,0.14); color:var(--tx2); }
   .ex-name{ font-size:14.5px; font-weight:800; flex:1; min-width:0; }
   .ex-note{ font-size:11.5px; color:var(--tx2); flex-basis:100%; }
@@ -507,10 +508,10 @@ const WD = {
 const DAYDEF = {
   d1:{ name:"Deadlift/pull strong", sub:"Тяга тяжёлая · присед · икры · подтяг." },
   d2:{ name:"Deadlift/pull weak", sub:"Подтяг. тяжёлые · лёгкая тяга" },
-  d3:{ name:"Push", sub:"Жим сидя · грудь · трицепс" },
+  d3:{ name:"Жим и руки", sub:"Жим стоя · бицепс · трицепс · пресс" },
   pr:{ name:"День попыток 🎯", sub:"Подходы к максимуму" },
 };
-const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], calf:["ИКРЫ","tg-calf"], arm:["РУКИ","tg-arm"] };
+const TAGS = { dl:["ТЯГА","tg-dl"], pu:["ПОДТЯГ","tg-pu"], sq:["ПРИСЕД","tg-sq"], press:["ЖИМ","tg-press"], chest:["ГРУДЬ","tg-chest"], calf:["ИКРЫ","tg-calf"], core:["ПРЕСС","tg-core"], arm:["РУКИ","tg-arm"] };
 
 // 2 рабочих подхода в основных движениях (и в тяжёлый, и в лёгкий день)
 function dlSets(top, bk){ return [ { reps:top[0], kg:top[1], rpe:top[2], tag:"top" },
@@ -547,11 +548,12 @@ function buildWeek(w){
     { type:"pu", name:"Подтягивания с весом — тяжёлые", note:"Полная амплитуда, подбородок над перекладиной.", sets:puSets(d.pt) },
     { type:"dl", name:"Становая — лёгкая / скоростная", note:"Лёгкий вес, идеальная техника и разгон. Отдых 60–90 с.", sets:spSets(d.sp) },
   ] });
-  // День 3 — жим сидя + руки
+  // День 3 — жим стоя + руки + пресс
   days.push({ key:"d3", name:DAYDEF.d3.name, sub:DAYDEF.d3.sub, ex:[
-    { type:"press", name:"Армейский жим сидя", note:"Средний вес, 5–10 чистых повторов, спина к спинке.", sets:repSets("5–10", 3, 8) },
-    { type:"chest", name:"Кроссовер на грудь", note:"Поддержка: 2 подхода, чистое сведение, без рывков.", sets:repSets("12–15", 2, 8) },
+    { type:"press", name:"Армейский жим стоя", note:"Жёсткий кор, жим над головой. 2 подхода, 8–10 повт.", sets:repSets("8–10", 2, 8) },
+    { type:"arm", name:"Бицепс со штангой", note:"Подъём на бицепс стоя, без раскачки.", sets:repSets("10–12", 2, 8) },
     { type:"arm", name:"Трицепс", note:"Французский жим / брусья / разгибания.", sets:repSets("12–15", 2, 8) },
+    { type:"core", name:"Пресс с блином", note:"Скручивания / подъёмы с блином. 2 подхода.", sets:repSets("15–20", 2, 8) },
   ] });
   return { days };
 }
