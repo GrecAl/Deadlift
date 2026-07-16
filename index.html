@@ -342,6 +342,28 @@
   .legend{ font-size:11px; color:var(--tx3); line-height:1.6; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
   .legend b{ color:var(--tx2); }
 
+  /* ====== ИМПОРТ ТРЕНИРОВКИ ====== */
+  .day-import{ padding:0 17px 8px; }
+  .imp-btn{ width:100%; background:var(--surface2); border:1px dashed var(--line2); border-radius:10px; color:var(--accent2);
+    font-size:12.5px; font-weight:800; padding:11px; cursor:pointer; }
+  .imp-btn:hover{ background:var(--surface3); border-color:var(--accent2); box-shadow:0 0 14px var(--acc-g); }
+  .btn-primary{ background:var(--accent); color:#04101f; } .btn-primary:hover{ filter:brightness(1.08); }
+  .modal-scrim{ position:fixed; inset:0; background:rgba(0,0,0,0.62); z-index:110; display:none; padding:20px; overflow-y:auto; }
+  .modal-scrim.show{ display:flex; align-items:flex-start; justify-content:center; }
+  .modal{ background:var(--surface); border:1px solid var(--line2); border-radius:16px; max-width:520px; width:100%; margin:auto;
+    padding:18px 18px 16px; box-shadow:0 24px 70px rgba(0,0,0,0.6); }
+  .modal h3{ font-size:16px; font-weight:900; margin-bottom:3px; }
+  .modal .msub{ font-size:12px; color:var(--tx2); margin-bottom:12px; }
+  .imp-ta{ width:100%; min-height:96px; background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--tx);
+    font-size:16px; padding:11px 12px; font-family:inherit; resize:vertical; line-height:1.5; }
+  .imp-ta:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px rgba(90,209,255,0.16); }
+  .imp-ta::placeholder{ color:var(--tx3); }
+  .imp-preview{ margin:12px 0 4px; display:flex; flex-direction:column; gap:6px; }
+  .imp-row{ font-size:12.5px; padding:9px 11px; border-radius:9px; background:var(--surface2); }
+  .imp-row.ok{ border-left:3px solid var(--ok); } .imp-row.ok b{ color:var(--tx); }
+  .imp-row.warn{ border-left:3px solid var(--warn); color:var(--tx2); }
+  .imp-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:10px; flex-wrap:wrap; }
+
   @media (prefers-reduced-motion: reduce){
     *{ transition-duration:0.001ms!important; animation-duration:0.001ms!important; scroll-behavior:auto!important; }
   }
@@ -463,6 +485,20 @@
   <div><div class="rest-time" id="restTime">0:00</div><div class="rest-lbl" id="restLbl">отдых</div></div>
   <button class="rest-act" id="restAdd" aria-label="Добавить 30 секунд">+30</button>
   <button class="rest-act" id="restStop" aria-label="Остановить таймер">✕</button>
+</div>
+
+<div class="modal-scrim" id="importScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="impTitle">
+    <h3 id="impTitle">Вставить тренировку</h3>
+    <div class="msub" id="impSub"></div>
+    <textarea class="imp-ta" id="impText" placeholder="тяга 90×13, 80×9&#10;присед 30×10&#10;икры 30 / 15" aria-label="Текст тренировки"></textarea>
+    <div class="imp-preview" id="impPreview"></div>
+    <div class="imp-actions">
+      <button class="btn btn-ghost" id="impCancel">Отмена</button>
+      <button class="btn btn-ghost" id="impParse">Разобрать</button>
+      <button class="btn btn-primary" id="impApply" style="display:none">Записать ✓</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -796,7 +832,8 @@ function dayDateHtml(w, dkey){
     <input class="dd-input" type="date" data-date="${id}" value="${val}" aria-label="Дата выполнения тренировки">
     <span class="dd-rel" data-ddrel="${id}">${val?relDays(val):""}</span>
     <button class="dd-today" data-ddtoday="${id}">Сегодня</button>
-  </div>`;
+  </div>
+  <div class="day-import"><button class="imp-btn" data-import="${id}">📋 Вставить тренировку текстом</button></div>`;
 }
 
 function renderWeekBody(){
@@ -869,6 +906,9 @@ function attachWeek(){
   document.querySelectorAll("[data-ddtoday]").forEach(btn=>{
     btn.onclick=()=>{ const id=btn.dataset.ddtoday; const t=todayISO(); state.dates[id]=t;
       const inp=document.querySelector(`[data-date="${id}"]`); if(inp) inp.value=t; updateDateRel(id); renderToday(); saveState(true); };
+  });
+  document.querySelectorAll("[data-import]").forEach(b=>{
+    b.onclick=()=>{ const p=b.dataset.import.split("."); openImport(+p[0], p[1]); };
   });
 }
 function autoDate(setIdStr){ const dk=dayKeyOf(setIdStr); if(!state.dates[dk]){ state.dates[dk]=todayISO();
@@ -1084,6 +1124,88 @@ document.getElementById("restPresets").innerHTML=RESTS.map(r=>`<button class="re
 document.querySelectorAll("[data-rest]").forEach(b=> b.onclick=()=>startRest(+b.dataset.rest,"отдых"));
 document.getElementById("restAuto").onchange=(e)=>{ state.ui.restAuto=e.target.checked; saveState(false);
   showToast(e.target.checked?"Авто-старт таймера включён":"Авто-старт выключен", null, null, 1400, true); };
+
+/* ===================== ИМПОРТ ТРЕНИРОВКИ ТЕКСТОМ ===================== */
+let impCtx = { w:1, dkey:"d1", res:null };
+function impNum(s){ return parseFloat(String(s).replace(",",".").replace("+","")); }
+function detectExercise(line, dayEx){
+  const l=line.toLowerCase().replace(/ё/g,"е");
+  const rules=[
+    { kw:["присед"],                     m:e=>e.type==="sq" },
+    { kw:["икр"],                        m:e=>e.type==="calf" },
+    { kw:["трицепс","триц"],             m:e=>/трицепс/i.test(e.name) },
+    { kw:["бицепс","биц"],               m:e=>/бицепс/i.test(e.name) },
+    { kw:["пресс","планк","кор "],       m:e=>e.type==="core" },
+    { kw:["кроссовер","грудь","сведен"], m:e=>e.type==="chest" },
+    { kw:["жим","армейск"],              m:e=>e.type==="press" },
+    { kw:["подтяг"],                     m:e=>e.type==="pu" },
+    { kw:["станов","тяга","тяг"],        m:e=>e.type==="dl" },
+  ];
+  for(const r of rules){ if(r.kw.some(k=>l.includes(k))){ const i=dayEx.findIndex(r.m); if(i>=0) return i; } }
+  return -1;
+}
+function parseSets(raw){
+  let t=raw.toLowerCase().replace(/ё/g,"е").replace(/\//g," ").replace(/кг|повт[а-я]*/g,"")
+    .replace(/(\d)\s*[×хx*]\s*(\d)/g,"$1*$2").replace(/(\d)\s*на\s*(\d)/g,"$1*$2").replace(/[,;]/g," ");
+  const sets=[]; let m; const re=/([+]?\d+(?:[.,]\d+)?)\s*\*\s*(\d+)/g;
+  while(m=re.exec(t)){ sets.push({ kg:impNum(m[1]), reps:parseInt(m[2],10) }); }
+  if(sets.length) return sets;
+  const cnt=t.match(/(\d+)\s*(?:пдх|подход)/), w=t.match(/([+]?\d+(?:[.,]\d+)?)/);
+  if(cnt&&w){ const n=Math.min(6,parseInt(cnt[1],10)); for(let i=0;i<n;i++) sets.push({ kg:impNum(w[1]), reps:null }); return sets; }
+  const ws=t.match(/[+]?\d+(?:[.,]\d+)?/g);
+  if(ws) ws.forEach(x=> sets.push({ kg:impNum(x), reps:null }));
+  return sets;
+}
+function parseWorkout(text, w, dkey){
+  const day=week(w).days.find(d=>d.key===dkey);
+  const lines=text.split(/[\n;]+/).map(s=>s.trim()).filter(Boolean);
+  const matched=[], unmatched=[];
+  lines.forEach(line=>{ const i=detectExercise(line, day.ex); const sets=parseSets(line);
+    if(i<0||!sets.length){ unmatched.push(line); return; }
+    matched.push({ exIndex:i, exName:day.ex[i].name, type:day.ex[i].type, sets }); });
+  return { matched, unmatched };
+}
+function impEsc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function renderImportPreview(res){
+  const host=document.getElementById("impPreview"); let html="";
+  res.matched.forEach(mm=>{ const pre=mm.type==="pu"?"+":"";
+    const s=mm.sets.map(x=> x.reps!=null?`${pre}${fmtKg(x.kg)}×${x.reps}`:`${pre}${fmtKg(x.kg)}`).join(", ");
+    html+=`<div class="imp-row ok">✓ <b>${mm.exName}</b> → ${s} <span style="color:var(--tx3)">(${mm.sets.length} подх.)</span></div>`; });
+  res.unmatched.forEach(u=> html+=`<div class="imp-row warn">⚠ не распознал: «${impEsc(u)}»</div>`);
+  if(!res.matched.length && !res.unmatched.length) html=`<div class="imp-row warn">Пусто — вставь текст тренировки.</div>`;
+  host.innerHTML=html;
+  document.getElementById("impApply").style.display = res.matched.length ? "" : "none";
+}
+function openImport(w, dkey){
+  impCtx={ w, dkey, res:null };
+  const day=week(w).days.find(d=>d.key===dkey);
+  document.getElementById("impSub").textContent=`${day.name} · Неделя ${w} · распознаю «вес × повторы» по каждому упражнению`;
+  document.getElementById("impText").value="";
+  document.getElementById("impPreview").innerHTML="";
+  document.getElementById("impApply").style.display="none";
+  document.getElementById("importScrim").classList.add("show");
+  setTimeout(()=>document.getElementById("impText").focus(), 50);
+}
+function closeImport(){ document.getElementById("importScrim").classList.remove("show"); }
+function applyImport(){
+  const { w, dkey, res }=impCtx; if(!res) return;
+  const day=week(w).days.find(d=>d.key===dkey); let filled=0;
+  res.matched.forEach(mm=>{ const ex=day.ex[mm.exIndex];
+    mm.sets.forEach((s,i)=>{ if(i>=ex.sets.length) return;
+      const e=ensureLog(setId(w,dkey,mm.exIndex,i));
+      if(s.kg!=null) e.kg=s.kg; if(s.reps!=null) e.reps=s.reps; e.done=true; filled++; }); });
+  if(!state.dates[w+"."+dkey]) state.dates[w+"."+dkey]=todayISO();
+  saveState(false);
+  if(curWeekView!==w){ curWeekView=w; state.ui.week=w; }
+  renderWkNav(); renderToday(); renderWeekSwitch(); renderWeekBody(); refreshCounts();
+  closeImport(); buzz(14);
+  showToast(`Записано: ${res.matched.length} упр. · ${filled} подх.`, null, null, 2400, true);
+}
+document.getElementById("impParse").onclick=()=>{ const res=parseWorkout(document.getElementById("impText").value, impCtx.w, impCtx.dkey); impCtx.res=res; renderImportPreview(res); };
+document.getElementById("impApply").onclick=applyImport;
+document.getElementById("impCancel").onclick=closeImport;
+document.getElementById("importScrim").onclick=(e)=>{ if(e.target.id==="importScrim") closeImport(); };
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && document.getElementById("importScrim").classList.contains("show")) closeImport(); });
 
 /* ===================== PWA ===================== */
 let deferredPrompt=null;
